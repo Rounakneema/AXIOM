@@ -124,8 +124,12 @@ public class MascotOverlay extends JWindow {
                 int currY = e.getYOnScreen();
                 
                 if (lastScreenX != -1) {
-                    velX = (currX - lastScreenX) * 0.6;
-                    velY = (currY - lastScreenY) * 0.6;
+                    double dx = currX - lastScreenX;
+                    double dy = currY - lastScreenY;
+                    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+                        velX = dx * 0.8;
+                        velY = dy * 0.8;
+                    }
                 }
                 lastScreenX = currX;
                 lastScreenY = currY;
