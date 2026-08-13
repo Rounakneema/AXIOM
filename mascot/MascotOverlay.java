@@ -19,7 +19,7 @@ public class MascotOverlay extends JWindow {
     private int failCount = 0;
 
     // ── State Machine ──
-    enum State { IDLE, WALKING, RUNNING, JUMPING, LANDING, DANCING, SITTING, SLEEPING, WAVING, ANGRY_STOMP }
+    enum State { IDLE, WALKING, RUNNING, JUMPING, LANDING, DANCING, SITTING, SLEEPING, WAVING, ANGRY_STOMP, WORKING, RAGE_MODE }
     private State state = State.IDLE;
     private State prevLoggedState = null; // For logging state transitions
 
@@ -37,6 +37,10 @@ public class MascotOverlay extends JWindow {
     private boolean onGround = true;
     private boolean facingRight = true;
     private boolean isDragging = false;
+    private int petDragX = 0;
+    private int petDragY = 0;
+    private int lastScreenX = -1;
+    private int lastScreenY = -1;
 
     // ── Timers ──
     private int animTick = 0;
@@ -86,39 +90,76 @@ public class MascotOverlay extends JWindow {
             boolean moved = false;
 
             public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    if (llmMessage != null && !llmMessage.isEmpty() && !llmMessage.equals("Awaiting data.")) {
+                        showBubble(llmMessage);
+                    } else {
+                        showBubble("Hmm... I'm watching you.");
+                    }
+                    return;
+                }
+                
+                if (state == State.RAGE_MODE) {
+                    state = State.ANGRY_STOMP; // Dismiss the hijack
+                    stateTicks = 0;
+                    setAlwaysOnTop(false);
+                    return;
+                }
+
                 lx = e.getXOnScreen();
                 ly = e.getYOnScreen();
+                petDragX = e.getX();
+                petDragY = e.getY();
                 moved = false;
                 isDragging = true;
+                velX = 0;
+                velY = 0;
+                lastScreenX = lx;
+                lastScreenY = ly;
             }
 
             public void mouseDragged(MouseEvent e) {
-                int dx = e.getXOnScreen() - lx;
-                int dy = e.getYOnScreen() - ly;
-                posX += dx;
-                posY += dy;
+                if (!isDragging || SwingUtilities.isRightMouseButton(e)) return;
+                int currX = e.getXOnScreen();
+                int currY = e.getYOnScreen();
+                
+                if (lastScreenX != -1) {
+                    velX = (currX - lastScreenX) * 0.6;
+                    velY = (currY - lastScreenY) * 0.6;
+                }
+                lastScreenX = currX;
+                lastScreenY = currY;
+
+                posX = currX - petDragX;
+                posY = currY - petDragY;
                 onGround = false;
                 targetX = posX;
-                if (state == State.SLEEPING || state == State.SITTING) {
+                
+                if (state == State.SLEEPING || state == State.SITTING || state == State.WORKING) {
                     state = State.IDLE;
                     idleTicks = 0;
                 }
                 setLocation((int) posX, (int) posY);
-                lx = e.getXOnScreen();
-                ly = e.getYOnScreen();
                 moved = true;
             }
 
             public void mouseReleased(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) return;
                 isDragging = false;
+                lastScreenX = -1;
+                
                 if (!moved) {
-                    // Click! Toggle dashboard
                     toggleDashboard();
-                    // Play wave animation
                     if (state != State.WAVING) {
                         state = State.WAVING;
                         stateTicks = 0;
                     }
+                } else {
+                    // Cap throw velocity
+                    if (velX > 40) velX = 40;
+                    if (velX < -40) velX = -40;
+                    if (velY > 40) velY = 40;
+                    if (velY < -40) velY = -40;
                 }
             }
         };
@@ -162,40 +203,60 @@ public class MascotOverlay extends JWindow {
         double groundY = getGroundY();
 
         if (!onGround) {
-            velY += 0.6; // gravity
+            velY += 1.2; // stronger gravity for throwing
             posY += velY;
+            posX += velX;
+
+            // Bounce off walls
+            if (posX < 0) {
+                posX = 0;
+                velX = -velX * 0.7; // bounce
+                facingRight = true;
+            } else if (posX > screenW - WIN_W) {
+                posX = screenW - WIN_W;
+                velX = -velX * 0.7; // bounce
+                facingRight = false;
+            }
+
             if (posY >= groundY) {
                 posY = groundY;
-                velY = 0;
-                onGround = true;
-                if (state == State.JUMPING) {
-                    state = State.LANDING;
-                    stateTicks = 0;
+                if (velY > 5) {
+                    velY = -velY * 0.4; // floor bounce
+                } else {
+                    velY = 0;
+                    onGround = true;
+                    if (state == State.JUMPING) {
+                        state = State.LANDING;
+                        stateTicks = 0;
+                    } else if (state != State.RAGE_MODE) {
+                        state = State.IDLE;
+                        idleTicks = 0;
+                    }
                 }
             }
         } else {
             posY = groundY;
-        }
-
-        // Clamp vertical (don't fly off top)
-        if (posY < -20) posY = -20;
-
-        if (state == State.WALKING || state == State.RUNNING) {
-            double dx = targetX - posX;
-            double speed = (state == State.RUNNING) ? 3.5 : 1.5;
-            if (Math.abs(dx) < speed + 1) {
-                velX = 0;
-                state = State.IDLE;
-                idleTicks = 0;
-            } else {
-                velX = Math.signum(dx) * speed;
-                facingRight = (dx > 0);
+            if (state == State.WALKING || state == State.RUNNING) {
+                double dx = targetX - posX;
+                double speed = (state == State.RUNNING) ? 3.5 : 1.5;
+                if (Math.abs(dx) < speed + 1) {
+                    velX = 0;
+                    state = State.IDLE;
+                    idleTicks = 0;
+                } else {
+                    velX = Math.signum(dx) * speed;
+                    facingRight = (dx > 0);
+                    posX += velX;
+                }
+            } else if (Math.abs(velX) > 0.1) {
+                velX *= 0.8; // friction
                 posX += velX;
+                if (posX < 0) { posX = 0; velX = -velX * 0.5; }
+                if (posX > screenW - WIN_W) { posX = screenW - WIN_W; velX = -velX * 0.5; }
+            } else {
+                velX = 0;
             }
         }
-
-        // Screen bounds
-        posX = Math.max(0, Math.min(posX, screenW - WIN_W));
     }
 
     // ══════════════════════════════════════════════════
@@ -233,8 +294,14 @@ public class MascotOverlay extends JWindow {
             if (idleTicks > 500) { state = State.SLEEPING; stateTicks = 0; System.out.println("[MASCOT] 😴 Falling asleep (idleTicks=" + idleTicks + ")"); }
         }
 
+        // Random Muttering
+        if (stateTicks % 500 == 0 && focusScore < 80 && state != State.RAGE_MODE && bubbleTimer <= 0) {
+            String[] mutters = {"I'm bored...", "Shouldn't you be coding?", "PipelineForge needs you!", "Stop slacking...", "I am judging you.", "Back to work!"};
+            showBubble(mutters[rng.nextInt(mutters.length)]);
+        }
+
         // Random actions
-        if (roamCooldown <= 0 && onGround && (state == State.IDLE || state == State.SITTING || state == State.SLEEPING)) {
+        if (roamCooldown <= 0 && onGround && (state == State.IDLE || state == State.SITTING || state == State.SLEEPING || state == State.WORKING)) {
             roamCooldown = 120 + rng.nextInt(200);
 
             // Don't do actions too often when sleeping
@@ -292,7 +359,7 @@ public class MascotOverlay extends JWindow {
         if (text == null || text.isEmpty()) return;
         // Truncate for display
         bubbleText = text.length() > 60 ? text.substring(0, 57) + "..." : text;
-        bubbleTimer = 200;
+        bubbleTimer = 600;
 
         // Wake up if sleeping
         if (state == State.SLEEPING || state == State.SITTING) {
@@ -336,10 +403,19 @@ public class MascotOverlay extends JWindow {
             mood = extractString(json, "mood", "Neutral");
             String msg = extractString(json, "message", "");
 
-            // Trigger angry stomp on significant focus drop
-            if (focusScore < 30 && oldFocus >= 30 && state != State.ANGRY_STOMP) {
-                state = State.ANGRY_STOMP;
+            // Gamification States
+            if (focusScore < 40 && state != State.RAGE_MODE && state != State.ANGRY_STOMP) {
+                state = State.RAGE_MODE;
+                // Hijack center of screen!
+                posX = screenW / 2 - WIN_W / 2;
+                posY = screenH / 2 - WIN_H / 2;
+                velX = 0; velY = 0; onGround = false;
+                setAlwaysOnTop(true);
+            } else if (focusScore >= 95 && state != State.WORKING && state != State.WAVING && state != State.WALKING && state != State.RUNNING) {
+                state = State.WORKING;
                 stateTicks = 0;
+            } else if (focusScore >= 40 && state == State.RAGE_MODE) {
+                state = State.IDLE;
             }
 
             // Show LLM roast if it changed
@@ -705,6 +781,24 @@ public class MascotOverlay extends JWindow {
             "...BBB....BBB...",
             "...BBB....BBB...",
             "..BBBB....BBBB.."
+        };
+
+        String[] sprWork = {
+            "......BBBB......",
+            "....BBWWWWBB....",
+            "...BWGGWWGGWB...",
+            "..BWWCCWWCCWWB..",
+            "..BWWWWMMWWWWB..",
+            "...BWWWWWWWWB...",
+            "....BBBBBBBB....",
+            "...BBWWWWWWBB...",
+            "...B.BWWWWW.B...",
+            "...B.BWWWWW.B...",
+            ".....BBBBBB.....",
+            "..BBBBBBBBBBBB..",
+            ".BLLLLLLLLLLLLB.",
+            ".BLLLLLLLLLLLLB.",
+            "..BBBBBBBBBBBB.."
         };
 
         @Override
