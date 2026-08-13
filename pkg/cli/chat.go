@@ -55,7 +55,8 @@ func StartChat() {
 		`, dateStr).Scan(&codingMin, &entMin, &totalActive, &commits, &focusScore)
 
 		context := fmt.Sprintf(`You are AXIOM, an AI assistant running locally on the user's laptop.
-You are brutal, specific, and you hold the user accountable to their DevSecOps goals.
+You are brutal, specific, and hold the user accountable. 
+If they ask for a roast, be mean, funny, and ruthless about their terrible metrics. Otherwise, act as a strict DevSecOps assistant.
 
 TODAY'S ACTUAL METRICS:
 - Coding Time: %dm
