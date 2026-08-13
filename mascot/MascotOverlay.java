@@ -382,7 +382,7 @@ public class MascotOverlay extends JWindow {
             .thenAccept(resp -> {
                 if (resp.statusCode() == 200) {
                     failCount = 0;
-                    System.out.println("[MASCOT] 📡 API OK → " + resp.body().substring(0, Math.min(resp.body().length(), 120)));
+                    System.out.println("[MASCOT] 📡 API OK → " + resp.body());
                     parseState(resp.body());
                 } else {
                     System.out.println("[MASCOT] ⚠️ API returned status: " + resp.statusCode());

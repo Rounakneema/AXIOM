@@ -70,7 +70,10 @@ func StartServer(port int, goalsConfig *goals.Goals, dbChan chan<- event.Event) 
 		}
 		
 		message := "Your focus is excellent right now! Keep it up."
-		if nullMessage.Valid && nullMessage.String != "" {
+		if focusScore < 95.0 {
+			message = "Analyzing distractions... generating roast..."
+		}
+		if nullMessage.Valid && nullMessage.String != "" && nullMessage.String != "Awaiting data." && nullMessage.String != "Your focus is excellent right now! Keep it up." {
 			message = nullMessage.String
 		}
 
