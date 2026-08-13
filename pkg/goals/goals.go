@@ -145,6 +145,16 @@ func (g *Goals) GetSystemPrompt() string {
 	if g.LimitsAndTargets.MinProjectCommits > 0 {
 		sb.WriteString(fmt.Sprintf("- Target: %d commits per day\n", g.LimitsAndTargets.MinProjectCommits))
 	}
+	sb.WriteString("\nWorking Hours & Focus Mode:\n")
+	if g.Identity.WorkingHours.StartTime != "" && g.Identity.WorkingHours.EndTime != "" {
+		sb.WriteString(fmt.Sprintf("- Expected Working Hours: %s to %s\n", g.Identity.WorkingHours.StartTime, g.Identity.WorkingHours.EndTime))
+	}
+	if len(g.Identity.WorkingHours.PeakFocusWindows) > 0 {
+		sb.WriteString("- Peak Focus Windows (CRITICAL - BE MERCILESS IF DISTRACTED HERE):\n")
+		for _, w := range g.Identity.WorkingHours.PeakFocusWindows {
+			sb.WriteString(fmt.Sprintf("  * %s to %s\n", w.Start, w.End))
+		}
+	}
 	
 	sb.WriteString("\nIf they ask for a roast, be mean, funny, and ruthless about their terrible metrics. Otherwise, act as a strict assistant.\n")
 	
