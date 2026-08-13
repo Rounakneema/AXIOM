@@ -398,6 +398,19 @@ func writeSession(g *goals.Goals, ch chan<- event.Event, s session, end time.Tim
 				domainCat = g.ClassifyDomain(s.title)
 			}
 
+			// --- Smart YouTube Heuristics ---
+			if payload.Domain == "youtube.com" {
+				lowerTitle := strings.ToLower(s.title)
+				if strings.Contains(lowerTitle, "music") || strings.Contains(lowerTitle, "lofi") || strings.Contains(lowerTitle, "song") || strings.Contains(lowerTitle, "lyrical") || strings.Contains(lowerTitle, "visualiser") || strings.Contains(lowerTitle, "album") || strings.Contains(lowerTitle, "spotify") {
+					domainCat = "music"
+				} else if strings.Contains(lowerTitle, "tutorial") || strings.Contains(lowerTitle, "course") || strings.Contains(lowerTitle, "lecture") || strings.Contains(lowerTitle, "aws") || strings.Contains(lowerTitle, "kubernetes") || strings.Contains(lowerTitle, "golang") || strings.Contains(lowerTitle, "devsecops") || strings.Contains(lowerTitle, "learn") {
+					domainCat = "learning"
+				} else {
+					domainCat = "entertainment"
+				}
+			}
+			// ---------------------------------
+
 			if domainCat != "unknown" {
 				cat = domainCat
 			} else {

@@ -102,6 +102,19 @@ func StartDBWorker(db *sql.DB, goalsConfig *goals.Goals) {
 				if cat == "" || cat == "unknown" {
 					cat = "entertainment" // Default: if it's a browser and we can't identify it, assume distraction
 				}
+
+				// --- Smart YouTube Heuristics ---
+				if strings.Contains(ev.Domain, "youtube.com") || strings.Contains(ev.URL, "youtube.com") {
+					lowerTitle := strings.ToLower(ev.Title)
+					if strings.Contains(lowerTitle, "music") || strings.Contains(lowerTitle, "lofi") || strings.Contains(lowerTitle, "song") || strings.Contains(lowerTitle, "lyrical") || strings.Contains(lowerTitle, "visualiser") || strings.Contains(lowerTitle, "album") || strings.Contains(lowerTitle, "spotify") {
+						cat = "music"
+					} else if strings.Contains(lowerTitle, "tutorial") || strings.Contains(lowerTitle, "course") || strings.Contains(lowerTitle, "lecture") || strings.Contains(lowerTitle, "aws") || strings.Contains(lowerTitle, "kubernetes") || strings.Contains(lowerTitle, "golang") || strings.Contains(lowerTitle, "devsecops") || strings.Contains(lowerTitle, "learn") {
+						cat = "learning"
+					} else {
+						cat = "entertainment"
+					}
+				}
+				// ---------------------------------
 				log.Printf("🏷️ [CLASSIFY] Browser=%s Title=\"%.50s\" → %s", ev.App, ev.Title, cat)
 			} else {
 				// For desktop apps: classify by app name, then fallback to title
@@ -192,6 +205,7 @@ func runMigrations(db *sql.DB) error {
 			-- Core time tracking
 			coding_minutes          INTEGER DEFAULT 0,
 			entertainment_minutes   INTEGER DEFAULT 0,
+			music_minutes           INTEGER DEFAULT 0,
 			learning_minutes        INTEGER DEFAULT 0,
 			idle_minutes            INTEGER DEFAULT 0,
 			communication_minutes   INTEGER DEFAULT 0,
@@ -317,6 +331,7 @@ func runMigrations(db *sql.DB) error {
 		"ALTER TABLE daily_stats ADD COLUMN git_deletions INTEGER DEFAULT 0;",
 		"ALTER TABLE daily_stats ADD COLUMN peak_coding_hour INTEGER DEFAULT -1;",
 		"ALTER TABLE daily_stats ADD COLUMN github_minutes INTEGER DEFAULT 0;",
+		"ALTER TABLE daily_stats ADD COLUMN music_minutes INTEGER DEFAULT 0;",
 	}
 	for _, a := range alterMigrations {
 		db.Exec(a) // intentionally ignore errors — column may already exist

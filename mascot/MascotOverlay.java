@@ -48,6 +48,7 @@ public class MascotOverlay extends JWindow {
     private double focusScore = 100;
     private int codingMinutes = 0;
     private int entertainmentMinutes = 0;
+    private int musicMinutes = 0;
     private String mood = "Neutral";
     private String llmMessage = "";
     private String bubbleText = "";
@@ -331,6 +332,7 @@ public class MascotOverlay extends JWindow {
             focusScore = extractDouble(json, "focus_score", 100);
             codingMinutes = (int) extractDouble(json, "coding_minutes", 0);
             entertainmentMinutes = (int) extractDouble(json, "entertainment_minutes", 0);
+            musicMinutes = (int) extractDouble(json, "music_minutes", 0);
             mood = extractString(json, "mood", "Neutral");
             String msg = extractString(json, "message", "");
 
@@ -463,12 +465,18 @@ public class MascotOverlay extends JWindow {
                     g2.setColor(new Color(0, 200, 255));
                     g2.drawString("\u2580 Coding", 16, y);
                     g2.setColor(new Color(160, 170, 200));
-                    g2.drawString(codingMinutes + " min", 90, y);
+                    g2.drawString(codingMinutes + " min", 75, y);
 
                     g2.setColor(new Color(255, 100, 100));
-                    g2.drawString("\u2580 Distracted", 140, y);
+                    g2.drawString("\u2580 Distracted", 125, y);
                     g2.setColor(new Color(160, 170, 200));
-                    g2.drawString(entertainmentMinutes + " min", 220, y);
+                    g2.drawString(entertainmentMinutes + " min", 205, y);
+                    y += 16;
+                    
+                    g2.setColor(new Color(200, 100, 255));
+                    g2.drawString("\u2580 Music", 16, y);
+                    g2.setColor(new Color(160, 170, 200));
+                    g2.drawString(musicMinutes + " min", 75, y);
                     y += 22;
 
                     // Focus bar

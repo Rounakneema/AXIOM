@@ -54,14 +54,15 @@ func StartServer(port int, goalsConfig *goals.Goals, dbChan chan<- event.Event) 
 		var focusScore float64
 		var codingMin int
 		var entMin int
+		var musicMin int
 		var mood string
 		var message string
 
 		// Get today's stats
 		err := db.QueryRow(`
-			SELECT focus_score, coding_minutes, entertainment_minutes, axiom_mood_eod, axiom_summary
+			SELECT focus_score, coding_minutes, entertainment_minutes, music_minutes, axiom_mood_eod, axiom_summary
 			FROM daily_stats WHERE date = ?
-		`, dateStr).Scan(&focusScore, &codingMin, &entMin, &mood, &message)
+		`, dateStr).Scan(&focusScore, &codingMin, &entMin, &musicMin, &mood, &message)
 
 		if err != nil {
 			// Fallback: Compute real-time from today's raw events
@@ -91,6 +92,7 @@ func StartServer(port int, goalsConfig *goals.Goals, dbChan chan<- event.Event) 
 			"focus_score": focusScore,
 			"coding_minutes": codingMin,
 			"entertainment_minutes": entMin,
+			"music_minutes": musicMin,
 			"mood": mood,
 			"message": message,
 		})

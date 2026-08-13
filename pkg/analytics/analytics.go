@@ -86,7 +86,7 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 	// ════════════════════════════════════════════════════════
 	dailyDurationsQuery := `
 		INSERT INTO daily_stats (
-			date, coding_minutes, entertainment_minutes, learning_minutes, 
+			date, coding_minutes, entertainment_minutes, music_minutes, learning_minutes, 
 			communication_minutes, youtube_minutes, reddit_minutes, 
 			github_minutes, stackoverflow_visits
 		)
@@ -94,6 +94,7 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 			date(timestamp / 1000, 'unixepoch', 'localtime') as day,
 			SUM(CASE WHEN category = 'coding' THEN duration_ms ELSE 0 END) / 60000,
 			SUM(CASE WHEN category = 'entertainment' THEN duration_ms ELSE 0 END) / 60000,
+			SUM(CASE WHEN category = 'music' THEN duration_ms ELSE 0 END) / 60000,
 			SUM(CASE WHEN category = 'learning' THEN duration_ms ELSE 0 END) / 60000,
 			SUM(CASE WHEN category = 'communication' THEN duration_ms ELSE 0 END) / 60000,
 			SUM(CASE WHEN domain LIKE '%youtube%' OR title LIKE '%YouTube%' THEN duration_ms ELSE 0 END) / 60000,
@@ -107,6 +108,7 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 		ON CONFLICT(date) DO UPDATE SET
 			coding_minutes = excluded.coding_minutes,
 			entertainment_minutes = excluded.entertainment_minutes,
+			music_minutes = excluded.music_minutes,
 			learning_minutes = excluded.learning_minutes,
 			communication_minutes = excluded.communication_minutes,
 			youtube_minutes = excluded.youtube_minutes,
