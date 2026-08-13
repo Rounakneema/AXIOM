@@ -13,11 +13,18 @@ import (
 
 	"axiom/pkg/event"
 	"axiom/pkg/goals"
+	"axiom/pkg/llm"
+	"sync"
 
 	"golang.org/x/sys/windows"
 )
 
 const idleThreshold = 2 * time.Minute
+
+var (
+	llmCache = make(map[string]string)
+	llmMutex sync.RWMutex
+)
 
 type Config struct {
 	PollInterval time.Duration
@@ -400,13 +407,34 @@ func writeSession(g *goals.Goals, ch chan<- event.Event, s session, end time.Tim
 
 			// --- Smart YouTube Heuristics ---
 			if payload.Domain == "youtube.com" {
-				lowerTitle := strings.ToLower(s.title)
-				if strings.Contains(lowerTitle, "music") || strings.Contains(lowerTitle, "lofi") || strings.Contains(lowerTitle, "song") || strings.Contains(lowerTitle, "lyrical") || strings.Contains(lowerTitle, "visualiser") || strings.Contains(lowerTitle, "album") || strings.Contains(lowerTitle, "spotify") {
-					domainCat = "music"
-				} else if strings.Contains(lowerTitle, "tutorial") || strings.Contains(lowerTitle, "course") || strings.Contains(lowerTitle, "lecture") || strings.Contains(lowerTitle, "aws") || strings.Contains(lowerTitle, "kubernetes") || strings.Contains(lowerTitle, "golang") || strings.Contains(lowerTitle, "devsecops") || strings.Contains(lowerTitle, "learn") {
-					domainCat = "learning"
+				llmMutex.RLock()
+				cachedCat, exists := llmCache[s.title]
+				llmMutex.RUnlock()
+
+				if exists {
+					domainCat = cachedCat
 				} else {
-					domainCat = "entertainment"
+					// Fallback to naive heuristics while we wait for the LLM
+					lowerTitle := strings.ToLower(s.title)
+					if strings.Contains(lowerTitle, "music") || strings.Contains(lowerTitle, "lofi") || strings.Contains(lowerTitle, "song") || strings.Contains(lowerTitle, "lyrical") || strings.Contains(lowerTitle, "visualiser") || strings.Contains(lowerTitle, "album") || strings.Contains(lowerTitle, "spotify") {
+						domainCat = "music"
+					} else if strings.Contains(lowerTitle, "tutorial") || strings.Contains(lowerTitle, "course") || strings.Contains(lowerTitle, "lecture") || strings.Contains(lowerTitle, "aws") || strings.Contains(lowerTitle, "kubernetes") || strings.Contains(lowerTitle, "golang") || strings.Contains(lowerTitle, "devsecops") || strings.Contains(lowerTitle, "learn") {
+						domainCat = "learning"
+					} else {
+						domainCat = "entertainment"
+					}
+
+					// Async fetch classification and cache it for the next poll cycle
+					llmMutex.Lock()
+					llmCache[s.title] = domainCat // Prevent duplicate goroutines
+					llmMutex.Unlock()
+					
+					go func(titleToClassify string) {
+						llmCat := llm.ClassifyYouTubeTitle(titleToClassify)
+						llmMutex.Lock()
+						llmCache[titleToClassify] = llmCat
+						llmMutex.Unlock()
+					}(s.title)
 				}
 			}
 			// ---------------------------------
