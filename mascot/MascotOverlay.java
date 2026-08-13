@@ -485,7 +485,12 @@ public class MascotOverlay extends JWindow {
     class DashboardPanel extends JWindow {
         DashboardPanel() {
             setAlwaysOnTop(true);
-            setSize(260, 200);
+            int baseHeight = 160;
+            if (llmMessage != null && !llmMessage.isEmpty() && !llmMessage.equals("Awaiting data.")) {
+                int lines = (llmMessage.length() / 50) + 1;
+                baseHeight += lines * 13 + 10;
+            }
+            setSize(280, baseHeight);
             setBackground(new Color(0, 0, 0, 0));
 
             // Close when clicking outside
@@ -574,9 +579,7 @@ public class MascotOverlay extends JWindow {
                         g2.drawLine(16, y - 6, getWidth() - 16, y - 6);
                         g2.setFont(new Font("Segoe UI", Font.ITALIC, 9));
                         g2.setColor(new Color(200, 180, 140));
-                        // Word wrap
-                        String display = llmMessage.length() > 80 ? llmMessage.substring(0, 77) + "..." : llmMessage;
-                        drawWrappedText(g2, "\"\u200b" + display + "\"", 16, y + 4, getWidth() - 32);
+                        drawWrappedText(g2, "\"\u200b" + llmMessage + "\"", 16, y + 4, getWidth() - 32);
                     }
 
                     g2.dispose();
