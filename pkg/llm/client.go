@@ -50,7 +50,7 @@ func AskAxiom(trigger string, context string, requireDeepLogic bool) (string, er
 	}
 
 	reqBody := OllamaGenerateRequest{
-		Model:     "qwen3:4b",
+		Model:     "qwen2.5:3b",
 		Prompt:    fullPrompt,
 		Stream:    false,
 		KeepAlive: 0, // TTL: 0 — model unloads instantly after response
