@@ -421,11 +421,11 @@ func writeSession(g *goals.Goals, ch chan<- event.Event, s session, end time.Tim
 		}
 	}
 
-	// Non-blocking write to the injected channel
+	// Bounded block on the channel to handle transient SQLite locks
 	select {
 	case ch <- payload:
-	default:
-		fmt.Printf("⚠️ Warning: DB Queue channel full, dropped event: %s\n", eventType)
+	case <-time.After(100 * time.Millisecond):
+		fmt.Printf("⚠️ Warning: DB Queue channel full for 100ms, dropped event: %s\n", eventType)
 	}
 }
 

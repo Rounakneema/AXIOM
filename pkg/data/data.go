@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"axiom/pkg/event"
 	"axiom/pkg/goals"
@@ -120,27 +121,39 @@ func StartDBWorker(db *sql.DB, goalsConfig *goals.Goals) {
 			}
 		}
 
-		_, err := stmt.Exec(
-			ev.Time.UnixMilli(),
-			ev.Type,
-			ev.Source,
-			ev.App,
-			ev.Activity,
-			ev.Confidence,
-			ev.Duration.Milliseconds(),
-			int64(ev.HWND),
-			ev.PID,
-			ev.Title,
-			ev.URL,
-			ev.Category,
-			ev.Project,
-			ev.GoalRelevant,
-			ev.Domain,
-			ev.ExitCode,
-			metadataJSON,
-		)
+		var err error
+		for retries := 0; retries < 5; retries++ {
+			_, err = stmt.Exec(
+				ev.Time.UnixMilli(),
+				ev.Type,
+				ev.Source,
+				ev.App,
+				ev.Activity,
+				ev.Confidence,
+				ev.Duration.Milliseconds(),
+				int64(ev.HWND),
+				ev.PID,
+				ev.Title,
+				ev.URL,
+				ev.Category,
+				ev.Project,
+				ev.GoalRelevant,
+				ev.Domain,
+				ev.ExitCode,
+				metadataJSON,
+			)
+			if err == nil {
+				break
+			}
+			if strings.Contains(err.Error(), "database is locked") {
+				time.Sleep(time.Duration(100 * (retries + 1)) * time.Millisecond)
+				continue
+			}
+			break
+		}
+
 		if err != nil {
-			log.Printf("❌ SQLite insertion error: %v", err)
+			log.Printf("❌ SQLite insertion error (dropped event after retries): %v", err)
 		}
 	}
 	log.Println("🔌 SQLite database worker shutdown completed.")

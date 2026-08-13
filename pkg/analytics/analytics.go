@@ -102,6 +102,7 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 			SUM(CASE WHEN (domain LIKE '%stackoverflow%' OR title LIKE '%Stack Overflow%') AND event_type = 'foreground_session' THEN 1 ELSE 0 END)
 		FROM events
 		WHERE event_type IN ('foreground_session', 'audio_session', 'background_media_session')
+		AND date(timestamp / 1000, 'unixepoch', 'localtime') = date('now', 'localtime')
 		GROUP BY day
 		ON CONFLICT(date) DO UPDATE SET
 			coding_minutes = excluded.coding_minutes,
@@ -135,7 +136,8 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 			target_met = CASE 
 				WHEN coding_minutes >= (coding_hours_target * 60) THEN 1 
 				ELSE 0 
-			END;
+			END
+		WHERE date = date('now', 'localtime');
 	`
 	if _, err := tx.Exec(focusScoreQuery); err != nil {
 		return err
@@ -149,7 +151,8 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 			SELECT SUM(duration_ms) / 60000 FROM events
 			WHERE activity = 'idle_open'
 			AND date(timestamp / 1000, 'unixepoch', 'localtime') = daily_stats.date
-		), 0);
+		), 0)
+		WHERE date = date('now', 'localtime');
 	`
 	if _, err := tx.Exec(idleQuery); err != nil {
 		return err
@@ -167,6 +170,7 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 			SUM(CASE WHEN title LIKE '%git commit%' OR title LIKE '%git push%' THEN 1 ELSE 0 END)
 		FROM events
 		WHERE event_type = 'terminal_command'
+		AND date(timestamp / 1000, 'unixepoch', 'localtime') = date('now', 'localtime')
 		GROUP BY day
 		ON CONFLICT(date) DO UPDATE SET
 			commands_run = excluded.commands_run,
@@ -183,7 +187,8 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 			SELECT COUNT(*) FROM events 
 			WHERE event_type = 'git_activity' 
 			AND date(timestamp / 1000, 'unixepoch', 'localtime') = daily_stats.date
-		), 0);
+		), 0)
+		WHERE date = date('now', 'localtime');
 	`
 	if _, err := tx.Exec(gitCommitsQuery); err != nil {
 		// Non-fatal; continue
@@ -214,7 +219,8 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 				SELECT COUNT(DISTINCT app) FROM events
 				WHERE event_type = 'foreground_session' AND app != ''
 				AND date(timestamp / 1000, 'unixepoch', 'localtime') = daily_stats.date
-			), 0);
+			), 0)
+		WHERE date = date('now', 'localtime');
 	`
 	if _, err := tx.Exec(sessionQuery); err != nil {
 		return err
@@ -239,9 +245,9 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 				SELECT SUM(duration_ms) / 60000 FROM events
 				WHERE category = 'coding' AND event_type = 'foreground_session'
 				AND date(timestamp / 1000, 'unixepoch', 'localtime') = daily_stats.date
-				AND CAST(strftime('%H', timestamp / 1000, 'unixepoch', 'localtime') AS INTEGER) >= 0
 				AND CAST(strftime('%H', timestamp / 1000, 'unixepoch', 'localtime') AS INTEGER) < 5
-			), 0);
+			), 0)
+		WHERE date = date('now', 'localtime');
 	`
 	if _, err := tx.Exec(timeBoundaryQuery); err != nil {
 		return err

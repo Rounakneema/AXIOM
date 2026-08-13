@@ -177,14 +177,11 @@ func main() {
 		mascotCmd.Process.Kill()
 	}
 
-	// Wait for sensors to detect context cancellation and stop sending events.
 	// The context is cancelled by signal.NotifyContext above, which triggers
-	// ctx.Done() in all sensor goroutines. We give them time to exit their
-	// loops before closing the DB channel to prevent "send on closed channel" panic.
+	// ctx.Done() in all sensor goroutines. We let the OS clean up channels 
+	// rather than manually closing data.DBChan, to prevent race conditions 
+	// where lingering goroutines might panic trying to write to a closed channel.
 	time.Sleep(2 * time.Second)
-
-	// Close channel to signal SQLite worker to finish remaining writes
-	close(data.DBChan)
 
 	// Give the SQLite worker a moment to flush remaining cache queries to disk
 	time.Sleep(1 * time.Second)

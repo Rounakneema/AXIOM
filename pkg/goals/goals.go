@@ -124,12 +124,28 @@ func (g *Goals) GetProjectForPath(filePath string) (string, bool) {
 			continue
 		}
 		repoPath := filepath.Clean(strings.ToLower(p.RepositoryPath))
+		if !strings.HasSuffix(repoPath, string(filepath.Separator)) {
+			repoPath += string(filepath.Separator)
+		}
+		
+		// If cleanPath is exactly the repo path without trailing slash, it's a match too
+		if cleanPath == strings.TrimSuffix(repoPath, string(filepath.Separator)) {
+			return p.Name, true
+		}
+
 		if strings.HasPrefix(cleanPath, repoPath) {
 			return p.Name, true
 		}
 		for _, alias := range p.DirectoryAliases {
-			if strings.Contains(cleanPath, strings.ToLower(alias)) {
-				return p.Name, true
+			if alias == "" {
+				continue
+			}
+			// require exact match of directory component to prevent "code" matching "vscode"
+			parts := strings.Split(cleanPath, string(filepath.Separator))
+			for _, part := range parts {
+				if part == strings.ToLower(alias) {
+					return p.Name, true
+				}
 			}
 		}
 	}
@@ -146,6 +162,9 @@ func (g *Goals) ClassifyApp(appName string) string {
 	sort.Strings(cats)
 	for _, cat := range cats {
 		for _, app := range g.LimitsAndTargets.CategorizationRules.Applications[cat] {
+			if app == "" {
+				continue
+			}
 			if strings.Contains(lowerApp, strings.ToLower(app)) {
 				return cat
 			}
@@ -164,6 +183,9 @@ func (g *Goals) ClassifyDomain(domainOrTitle string) string {
 	sort.Strings(cats)
 	for _, cat := range cats {
 		for _, dom := range g.LimitsAndTargets.CategorizationRules.Domains[cat] {
+			if dom == "" {
+				continue
+			}
 			if strings.Contains(lowerDomain, strings.ToLower(dom)) {
 				return cat
 			}

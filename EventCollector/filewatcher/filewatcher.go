@@ -147,13 +147,54 @@ func Run(ctx context.Context, cfg Config) error {
 			if cfg.Goals != nil {
 				projName, matched := cfg.Goals.GetProjectForPath(fwEvent.Name)
 				if matched {
-					project = projName
-					isRelevant = 1
-					for _, p := range cfg.Goals.Projects {
+					var matchedProj *goals.Project
+					for i, p := range cfg.Goals.Projects {
 						if p.Name == projName {
 							repoPath = p.RepositoryPath
+							matchedProj = &cfg.Goals.Projects[i]
 							break
 						}
+					}
+					
+					if matchedProj != nil {
+						// Apply Excluded Paths
+						skip := false
+						for _, excl := range matchedProj.FileWatcherRules.ExcludedPaths {
+							if excl != "" && strings.Contains(strings.ToLower(fwEvent.Name), strings.ToLower(excl)) {
+								skip = true
+								break
+							}
+						}
+						if skip {
+							continue
+						}
+
+						// Apply Included Extensions
+						if len(matchedProj.FileWatcherRules.IncludedExtensions) > 0 {
+							extMatch := false
+							ext := strings.ToLower(filepath.Ext(fwEvent.Name))
+							if !strings.HasPrefix(ext, ".") && ext != "" {
+								ext = "." + ext // normalizer just in case
+							}
+							for _, incExt := range matchedProj.FileWatcherRules.IncludedExtensions {
+								if incExt != "" {
+									if !strings.HasPrefix(incExt, ".") {
+										incExt = "." + incExt
+									}
+									if ext == strings.ToLower(incExt) {
+										extMatch = true
+										break
+									}
+								}
+							}
+							// Always allow .git events through so GitMonitor can work
+							if !extMatch && !strings.Contains(fwEvent.Name, string(filepath.Separator)+".git") {
+								continue
+							}
+						}
+						
+						project = projName
+						isRelevant = 1
 					}
 				}
 			}

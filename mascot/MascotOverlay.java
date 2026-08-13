@@ -318,8 +318,8 @@ public class MascotOverlay extends JWindow {
             })
             .exceptionally(ex -> {
                 failCount++;
-                System.out.println("[MASCOT] ❌ API poll failed (" + failCount + "/10): " + ex.getMessage());
-                if (failCount > 10) System.exit(0);
+                System.out.println("[MASCOT] ❌ API poll failed (" + failCount + "): " + ex.getMessage());
+                // Removed System.exit(0) to allow mascot to survive API restarts
                 return null;
             });
     }
@@ -367,12 +367,15 @@ public class MascotOverlay extends JWindow {
     }
 
     private String extractString(String json, String key, String fallback) {
-        int idx = json.indexOf("\"" + key + "\":\"");
+        int idx = json.indexOf("\"" + key + "\"");
         if (idx < 0) return fallback;
-        int start = json.indexOf(":\"", idx) + 2;
-        int end = json.indexOf("\"", start);
+        int colon = json.indexOf(':', idx);
+        if (colon < 0) return fallback;
+        int start = json.indexOf('"', colon);
+        if (start < 0) return fallback;
+        int end = json.indexOf('"', start + 1);
         if (end < 0) return fallback;
-        return json.substring(start, end);
+        return json.substring(start + 1, end);
     }
 
     // ══════════════════════════════════════════════════

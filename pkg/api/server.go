@@ -35,6 +35,10 @@ func StartServer(port int, goalsConfig *goals.Goals, dbChan chan<- event.Event) 
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		log.Printf("⚠️ API: Could not open memory.db for Mascot polling")
+	} else {
+		// Enable WAL and busy_timeout to prevent locking conflicts with the main RollupWorker
+		db.Exec("PRAGMA journal_mode=WAL;")
+		db.Exec("PRAGMA busy_timeout=5000;")
 	}
 
 	mux.HandleFunc("/api/state", func(w http.ResponseWriter, r *http.Request) {
