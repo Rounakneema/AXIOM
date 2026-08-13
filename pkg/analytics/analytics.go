@@ -42,11 +42,11 @@ func RollupWorker(ctx context.Context, db *sql.DB, goalsConfig *goals.Goals) {
 
 func triggerActiveIntervention(db *sql.DB) {
 	var currentFocus float64
-	var currentMessage string
+	var nullMessage sql.NullString
 	
-	err := db.QueryRow("SELECT focus_score, axiom_summary FROM daily_stats WHERE date = date('now', 'localtime')").Scan(&currentFocus, &currentMessage)
+	err := db.QueryRow("SELECT focus_score, axiom_summary FROM daily_stats WHERE date = date('now', 'localtime')").Scan(&currentFocus, &nullMessage)
 	
-	if err == nil && currentFocus > 0 && currentFocus < 95.0 && currentMessage == "Awaiting data." {
+	if err == nil && currentFocus > 0 && currentFocus < 95.0 && (!nullMessage.Valid || nullMessage.String == "" || nullMessage.String == "Awaiting data." || nullMessage.String == "Your focus is excellent right now! Keep it up.") {
 		// Only roast once per failure cycle (if message hasn't been updated yet)
 		log.Println("\n⚠️ [AXIOM LLM] 🔴 Focus is below 95%. Waking up Qwen3:4B to intervene...")
 
