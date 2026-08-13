@@ -370,10 +370,6 @@ func writeSession(g *goals.Goals, ch chan<- event.Event, s session, end time.Tim
 		}
 
 		if isBrowser {
-			domainCat := g.ClassifyDomain(s.title)
-			if domainCat != "unknown" {
-				cat = domainCat
-			}
 			// Extract domain for metadata if possible (naive approach)
 			parts := strings.Fields(strings.ToLower(s.title))
 			for _, part := range parts {
@@ -391,6 +387,21 @@ func writeSession(g *goals.Goals, ch chan<- event.Event, s session, end time.Tim
 				} else if strings.Contains(strings.ToLower(s.title), "stack overflow") {
 					payload.Domain = "stackoverflow.com"
 				}
+			}
+
+			// Classify by the extracted domain first, then fallback to title
+			domainCat := "unknown"
+			if payload.Domain != "" {
+				domainCat = g.ClassifyDomain(payload.Domain)
+			}
+			if domainCat == "unknown" {
+				domainCat = g.ClassifyDomain(s.title)
+			}
+
+			if domainCat != "unknown" {
+				cat = domainCat
+			} else {
+				cat = "entertainment" // Default unclassified browser activity to entertainment
 			}
 		}
 

@@ -89,12 +89,17 @@ func StartDBWorker(db *sql.DB, goalsConfig *goals.Goals) {
 
 			var cat string
 			if isBrowser {
-				// For browsers: ALWAYS classify by title/URL first (the app name is meaningless)
-				cat = goalsConfig.ClassifyDomain(ev.Title)
-				if cat == "unknown" && ev.URL != "" {
+				// For browsers: ALWAYS classify by domain/URL first (the app name is meaningless)
+				if ev.Domain != "" {
+					cat = goalsConfig.ClassifyDomain(ev.Domain)
+				}
+				if cat == "" || cat == "unknown" {
+					cat = goalsConfig.ClassifyDomain(ev.Title)
+				}
+				if (cat == "" || cat == "unknown") && ev.URL != "" {
 					cat = goalsConfig.ClassifyDomain(ev.URL)
 				}
-				if cat == "unknown" {
+				if cat == "" || cat == "unknown" {
 					cat = "entertainment" // Default: if it's a browser and we can't identify it, assume distraction
 				}
 				log.Printf("🏷️ [CLASSIFY] Browser=%s Title=\"%.50s\" → %s", ev.App, ev.Title, cat)
