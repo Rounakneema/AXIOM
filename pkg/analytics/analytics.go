@@ -130,7 +130,7 @@ func performRollup(db *sql.DB, goalsConfig *goals.Goals) error {
 			SUM(CASE WHEN domain LIKE '%github%' OR title LIKE '%GitHub%' THEN duration_ms ELSE 0 END) / 60000,
 			SUM(CASE WHEN (domain LIKE '%stackoverflow%' OR title LIKE '%Stack Overflow%') AND event_type = 'foreground_session' THEN 1 ELSE 0 END)
 		FROM events
-		WHERE event_type IN ('foreground_session', 'audio_session', 'background_media_session')
+		WHERE event_type IN ('foreground_session', 'audio_session')
 		AND date(timestamp / 1000, 'unixepoch', 'localtime') = date('now', 'localtime')
 		GROUP BY day
 		ON CONFLICT(date) DO UPDATE SET
