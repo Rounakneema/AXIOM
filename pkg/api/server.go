@@ -55,14 +55,24 @@ func StartServer(port int, goalsConfig *goals.Goals, dbChan chan<- event.Event) 
 		var codingMin int
 		var entMin int
 		var musicMin int
-		var mood string
-		var message string
+		var nullMood sql.NullString
+		var nullMessage sql.NullString
 
 		// Get today's stats
 		err := db.QueryRow(`
 			SELECT focus_score, coding_minutes, entertainment_minutes, music_minutes, axiom_mood_eod, axiom_summary
 			FROM daily_stats WHERE date = ?
-		`, dateStr).Scan(&focusScore, &codingMin, &entMin, &musicMin, &mood, &message)
+		`, dateStr).Scan(&focusScore, &codingMin, &entMin, &musicMin, &nullMood, &nullMessage)
+
+		mood := "Neutral"
+		if nullMood.Valid && nullMood.String != "" {
+			mood = nullMood.String
+		}
+		
+		message := "Your focus is excellent right now! Keep it up."
+		if nullMessage.Valid && nullMessage.String != "" {
+			message = nullMessage.String
+		}
 
 		if err != nil {
 			// Fallback: Compute real-time from today's raw events
