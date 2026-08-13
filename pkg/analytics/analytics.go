@@ -82,7 +82,13 @@ func triggerActiveIntervention(db *sql.DB, goalsConfig *goals.Goals) {
 			if goalsConfig != nil {
 				systemPrompt = goalsConfig.GetSystemPrompt()
 			}
-			triggerCtx := fmt.Sprintf("%s\n\nUser focus has dropped to %.1f%%. They are distracted.", systemPrompt, focus)
+			currentTime := time.Now().Format("03:04 PM")
+			triggerCtx := fmt.Sprintf(`%s
+
+CURRENT CONTEXT:
+- Time of Day: %s (If it's early morning, judge them based on that. If it's late night, roast them for wasting the whole day.)
+
+User focus has dropped to %.1f%%. They are distracted.`, systemPrompt, currentTime, focus)
 			if activities != "" {
 				triggerCtx += "\nRecent specific distractions to roast them about:\n" + activities
 			}

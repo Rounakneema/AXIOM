@@ -61,7 +61,11 @@ func StartChat() {
 			FROM daily_stats WHERE date = ?
 		`, dateStr).Scan(&codingMin, &entMin, &totalActive, &commits, &focusScore)
 
+		currentTime := time.Now().Format("03:04 PM")
 		context := fmt.Sprintf(`%s
+
+CURRENT CONTEXT:
+- Time of Day: %s (Keep this in mind! If it's early morning, don't yell at them for not finishing their daily goals yet. If it's late at night, judge them accordingly.)
 
 TODAY'S ACTUAL METRICS:
 - Coding Time: %dm
@@ -70,7 +74,7 @@ TODAY'S ACTUAL METRICS:
 - Commits Today: %d
 - Focus Score: %.1f%%
 
-Respond aggressively but logically. Use these metrics as proof.`, systemPrompt, codingMin, entMin, totalActive, commits, focusScore)
+Respond aggressively but logically. Use these metrics as proof.`, systemPrompt, currentTime, codingMin, entMin, totalActive, commits, focusScore)
 
 		fmt.Println("🤔 AXIOM is thinking (TTL: 0)...")
 		
