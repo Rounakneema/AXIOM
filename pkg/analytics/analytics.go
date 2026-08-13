@@ -49,9 +49,37 @@ func triggerActiveIntervention(db *sql.DB) {
 	if err == nil && currentFocus > 0 && currentFocus < 95.0 && currentMessage == "Awaiting data." {
 		// Only roast once per failure cycle (if message hasn't been updated yet)
 		log.Println("\n⚠️ [AXIOM LLM] 🔴 Focus is below 95%. Waking up Qwen3:4B to intervene...")
+
+		// Fetch recent context for the LLM to make the roast hyper-specific
+		var recentActivities string
+		rows, qErr := db.Query(`
+			SELECT app, title, duration_ms 
+			FROM events 
+			WHERE date(timestamp / 1000, 'unixepoch', 'localtime') = date('now', 'localtime')
+			AND category = 'entertainment'
+			AND duration_ms > 5000
+			ORDER BY timestamp DESC
+			LIMIT 3
+		`)
+		if qErr == nil {
+			for rows.Next() {
+				var app, title string
+				var dur int
+				rows.Scan(&app, &title, &dur)
+				// Clean empty titles
+				if title == "" {
+					title = "Unknown Window"
+				}
+				recentActivities += fmt.Sprintf("- Spent %d seconds in %s: \"%s\"\n", dur/1000, app, title)
+			}
+			rows.Close()
+		}
 		
-		go func(focus float64) {
+		go func(focus float64, activities string) {
 			triggerCtx := fmt.Sprintf("User focus has dropped to %.1f%%. They are distracted.", focus)
+			if activities != "" {
+				triggerCtx += "\nRecent specific distractions to roast them about:\n" + activities
+			}
 			log.Printf("🤖 [AXIOM LLM] Thinking about: %s\n", triggerCtx)
 			
 			// Ask LLM (Mascot mode - fast)
@@ -68,7 +96,7 @@ func triggerActiveIntervention(db *sql.DB) {
 			if dbErr != nil {
 				log.Printf("❌ [AXIOM DB] Failed to save roast: %v\n", dbErr)
 			}
-		}(currentFocus)
+		}(currentFocus, recentActivities)
 	}
 }
 
