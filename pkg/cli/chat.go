@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"axiom/pkg/goals"
 	"axiom/pkg/llm"
 	_ "modernc.org/sqlite"
 )
@@ -30,6 +31,12 @@ func StartChat() {
 	fmt.Println("\nAXIOM is listening. (Type 'exit' to quit)")
 
 	scanner := bufio.NewScanner(os.Stdin)
+
+	goalsConfig, _ := goals.LoadGoals(filepath.Join(home, ".axiom", "goals.yaml"))
+	systemPrompt := "You are AXIOM, an AI assistant running locally on the user's laptop.\nYou are brutal, specific, and hold the user accountable. If they ask for a roast, be mean, funny, and ruthless about their terrible metrics. Otherwise, act as a strict DevSecOps assistant."
+	if goalsConfig != nil {
+		systemPrompt = goalsConfig.GetSystemPrompt()
+	}
 
 	for {
 		fmt.Print("\n> ")
@@ -54,9 +61,7 @@ func StartChat() {
 			FROM daily_stats WHERE date = ?
 		`, dateStr).Scan(&codingMin, &entMin, &totalActive, &commits, &focusScore)
 
-		context := fmt.Sprintf(`You are AXIOM, an AI assistant running locally on the user's laptop.
-You are brutal, specific, and hold the user accountable. 
-If they ask for a roast, be mean, funny, and ruthless about their terrible metrics. Otherwise, act as a strict DevSecOps assistant.
+		context := fmt.Sprintf(`%s
 
 TODAY'S ACTUAL METRICS:
 - Coding Time: %dm
@@ -65,7 +70,7 @@ TODAY'S ACTUAL METRICS:
 - Commits Today: %d
 - Focus Score: %.1f%%
 
-Respond aggressively but logically. Use these metrics as proof.`, codingMin, entMin, totalActive, commits, focusScore)
+Respond aggressively but logically. Use these metrics as proof.`, systemPrompt, codingMin, entMin, totalActive, commits, focusScore)
 
 		fmt.Println("🤔 AXIOM is thinking (TTL: 0)...")
 		

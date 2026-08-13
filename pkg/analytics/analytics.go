@@ -34,13 +34,13 @@ func RollupWorker(ctx context.Context, db *sql.DB, goalsConfig *goals.Goals) {
 			if err := performRollup(db, goalsConfig); err != nil {
 				log.Printf("⚠️ Analytics rollup error: %v", err)
 			} else {
-				triggerActiveIntervention(db)
+				triggerActiveIntervention(db, goalsConfig)
 			}
 		}
 	}
 }
 
-func triggerActiveIntervention(db *sql.DB) {
+func triggerActiveIntervention(db *sql.DB, goalsConfig *goals.Goals) {
 	var currentFocus float64
 	var nullMessage sql.NullString
 	
@@ -48,7 +48,7 @@ func triggerActiveIntervention(db *sql.DB) {
 	
 	if err == nil && currentFocus > 0 && currentFocus < 95.0 && (!nullMessage.Valid || nullMessage.String == "" || nullMessage.String == "Awaiting data." || nullMessage.String == "Your focus is excellent right now! Keep it up.") {
 		// Only roast once per failure cycle (if message hasn't been updated yet)
-		log.Println("\n⚠️ [AXIOM LLM] 🔴 Focus is below 95%. Waking up Qwen3:4B to intervene...")
+		log.Println("\n⚠️ [AXIOM LLM] 🔴 Focus is below 95%. Waking up Qwen2.5:3b to intervene...")
 
 		// Fetch recent context for the LLM to make the roast hyper-specific
 		var recentActivities string
@@ -76,7 +76,11 @@ func triggerActiveIntervention(db *sql.DB) {
 		}
 		
 		go func(focus float64, activities string) {
-			triggerCtx := fmt.Sprintf("User focus has dropped to %.1f%%. They are distracted.", focus)
+			systemPrompt := "You are a brutal, strict local AI assistant. The user's focus is terrible."
+			if goalsConfig != nil {
+				systemPrompt = goalsConfig.GetSystemPrompt()
+			}
+			triggerCtx := fmt.Sprintf("%s\n\nUser focus has dropped to %.1f%%. They are distracted.", systemPrompt, focus)
 			if activities != "" {
 				triggerCtx += "\nRecent specific distractions to roast them about:\n" + activities
 			}

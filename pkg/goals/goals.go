@@ -1,6 +1,7 @@
 package goals
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -115,6 +116,41 @@ func LoadGoals(path string) (*Goals, error) {
 
 	return &g, nil
 }
+
+// GetSystemPrompt generates an intelligent context prompt based on the user's configured goals
+func (g *Goals) GetSystemPrompt() string {
+	var sb strings.Builder
+	
+	name := g.Identity.Name
+	if name == "" {
+		name = "the user"
+	}
+	
+	sb.WriteString(fmt.Sprintf("You are AXIOM, a brutal and strict local AI assistant for %s.\n", name))
+	
+	if g.Identity.CurrentRole != "" {
+		sb.WriteString(fmt.Sprintf("The user is currently a %s, ", g.Identity.CurrentRole))
+	}
+	if g.Identity.TargetRole != "" {
+		sb.WriteString(fmt.Sprintf("trying to become a %s.\n", g.Identity.TargetRole))
+	}
+	
+	sb.WriteString("Your job is to hold them accountable to their goals:\n")
+	if g.CareerTarget.PrimaryGoal != "" {
+		sb.WriteString(fmt.Sprintf("- Primary Goal: %s\n", g.CareerTarget.PrimaryGoal))
+	}
+	if g.LimitsAndTargets.MinCodingHours > 0 {
+		sb.WriteString(fmt.Sprintf("- Target: %.1f hours of coding per day\n", g.LimitsAndTargets.MinCodingHours))
+	}
+	if g.LimitsAndTargets.MinProjectCommits > 0 {
+		sb.WriteString(fmt.Sprintf("- Target: %d commits per day\n", g.LimitsAndTargets.MinProjectCommits))
+	}
+	
+	sb.WriteString("\nIf they ask for a roast, be mean, funny, and ruthless about their terrible metrics. Otherwise, act as a strict assistant.\n")
+	
+	return sb.String()
+}
+
 
 // GetProjectForPath attempts to match a file path to one of the configured projects
 func (g *Goals) GetProjectForPath(filePath string) (string, bool) {
