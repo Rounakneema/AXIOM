@@ -26,7 +26,7 @@ func StartChat() {
 	fmt.Println("╔══════════════════════════════════════════════════════════════╗")
 	fmt.Println("║               AXIOM OS — Intelligent Terminal                ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
-	fmt.Println("Connecting to Qwen3:4b (Thinking Mode)...")
+	fmt.Println("Connecting to Qwen2.5:3b (Thinking Mode)...")
 	fmt.Println("\nAXIOM is listening. (Type 'exit' to quit)")
 
 	scanner := bufio.NewScanner(os.Stdin)

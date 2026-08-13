@@ -35,11 +35,11 @@ func AskAxiom(trigger string, context string, requireDeepLogic bool) (string, er
 	var numCtx int
 
 	if requireDeepLogic {
-		// Thinking mode: let Qwen3 reason deeply, larger budget
+		// Thinking mode: let Qwen2.5 reason deeply, larger budget
 		systemPrompt += "\nReason step by step using the data. Prove your conclusions with specific numbers."
 		fullPrompt = systemPrompt + "\n\nTrigger: " + trigger
-		numPredict = 400
-		numCtx = 2048
+		numPredict = 2048
+		numCtx = 4096
 	} else {
 		// Mascot mode: DISABLE thinking for instant speed
 		// Qwen3 respects /no_think tag to skip internal reasoning
