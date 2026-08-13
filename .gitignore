@@ -1,0 +1,17 @@
+# Binaries
+*.exe
+*.exe~
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Editor
+.vscode/
+.idea/
+
+# Local config
+memory.db
+history.log
+.gocache/
