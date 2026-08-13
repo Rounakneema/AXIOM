@@ -14,12 +14,14 @@ import (
 // RollupWorker runs continuously in the background and aggregates raw events into daily stats
 func RollupWorker(ctx context.Context, db *sql.DB, goalsConfig *goals.Goals) {
 	log.Println("📈 Analytics Rollup worker started...")
-	ticker := time.NewTicker(5 * time.Minute)
+	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	// Run an initial rollup on startup
 	if err := performRollup(db, goalsConfig); err != nil {
 		log.Printf("⚠️ Initial analytics rollup error: %v", err)
+	} else {
+		triggerActiveIntervention(db, goalsConfig)
 	}
 
 	for {
